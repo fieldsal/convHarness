@@ -27,7 +27,15 @@
    Version 1.1 : Fixed bug in code to create 4d matrix
 */
 
-#include < stdio.h > #include < stdlib.h > #include < sys / time.h > #include < assert.h > #include < omp.h > #include < math.h > #include < stdint.h > #include < xmmintrin.h > #include < x86intrin.h >
+#include < stdio.h > 
+#include < stdlib.h > 
+#include < sys / time.h > 
+#include < assert.h > 
+#include < omp.h > 
+#include < math.h > 
+#include < stdint.h > 
+#include < xmmintrin.h > 
+#include < x86intrin.h >
 
   /* the following two definitions of DEBUGGING control whether or not
      debugging information is written out. To put the program into
