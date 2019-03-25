@@ -274,7 +274,7 @@ void team_conv(int16_t *** image, int16_t **** kernels, float *** output,
                int kernel_order)
 {
 
-	int h, w, x, y, c, m;
+int h, w, x, y, c, m;
 	__m128i a,b; //vectors 
 	//__attribute__((aligned(16))) float vector[4];
 	
