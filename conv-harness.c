@@ -350,8 +350,7 @@ int main(int argc, char ** argv) {
     height, nchannels, nkernels, kernel_order);
   /* record finishing time */
   gettimeofday( & stop_time, NULL);
-  mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000 L +
-    (stop_time.tv_usec - start_time.tv_usec);
+  mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000 L + (stop_time.tv_usec - start_time.tv_usec);
   printf("Team conv time: %lld microseconds\n", mul_time);
 
   DEBUGGING(write_out(output, nkernels, width, height));
@@ -368,8 +367,7 @@ int main(int argc, char ** argv) {
     height, nchannels, nkernels, kernel_order);
   /* record finishing time */
   gettimeofday( & stop_time, NULL);
-  mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000 L +
-    (stop_time.tv_usec - start_time.tv_usec);
+  mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000 L +(stop_time.tv_usec - start_time.tv_usec);
   printf("not Team conv time: %lld microseconds\n", mul_time);
 
   return 0;
