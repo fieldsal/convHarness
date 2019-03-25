@@ -280,7 +280,6 @@ int h, w, x, y, c, m;
 	
 	#pragma omp parallel
  	for (m = 0; m < nkernels; m += 4) {
-	#pragma omp for collapse(2)
 		for ( w = 0; w < width; w++ ) {
 			for ( h = 0; h < height; h++ ) { 
 				//double ssum = 0.0;
