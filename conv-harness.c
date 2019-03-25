@@ -258,7 +258,7 @@ void team_conv(int16_t ** * image, int16_t ** ** kernels, float ** * output,
   int kernel_order) {
 
   int h, w, x, y, c, m;
-  __m128 * a, b; //vectors 
+  __m128i a, b; //vectors 
   //__attribute__((aligned(16))) float vector[4];
   #pragma omp parallel
   for (m = 0; m < nkernels; m += 4) {
@@ -266,8 +266,8 @@ void team_conv(int16_t ** * image, int16_t ** ** kernels, float ** * output,
     for (w = 0; w < width; w++) {
       for (h = 0; h < height; h++) {
         //double ssum = 0.0;
-        __m128 * sum = _mm_setr_epi32(0, 0, 0, 0);
-        __m128 * mul = _mm_setr_epi32(0, 0, 0, 0);
+        __m128i sum = _mm_setr_epi32(0, 0, 0, 0);
+        __m128i mul = _mm_setr_epi32(0, 0, 0, 0);
         for (c = 0; c < nchannels; c++) {
           for (x = 0; x < kernel_order; x++) {
 			#pragma omp parallel
