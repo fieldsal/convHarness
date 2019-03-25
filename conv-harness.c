@@ -278,7 +278,6 @@ int h, w, x, y, c, m;
 	__m128i a,b; //vectors 
 	//__attribute__((aligned(16))) float vector[4];
 	
-	#pragma omp parallel
  	for (m = 0; m < nkernels; m += 4) {
 		for ( w = 0; w < width; w++ ) {
 			for ( h = 0; h < height; h++ ) { 
