@@ -277,7 +277,7 @@ void team_conv(int16_t *** image, int16_t **** kernels, float *** output,
 int h, w, x, y, c, m;
 	__m128i a,b; //vectors 
 	//__attribute__((aligned(16))) float vector[4];
-	#pragma omp parallel
+	#pragma omp parallel 
 	{ 
 		#pragma omp for collapse(3)
 		for ( m = 0; m < nkernels; m++ ) {
@@ -289,16 +289,19 @@ int h, w, x, y, c, m;
 					__m128i sum = _mm_setr_epi32(0,0,0,0);
 					__m128i mul = _mm_setr_epi32(0,0,0,0);
 					for ( c = 0; c < nchannels; c+=4 ) {
-						//#pragma omp for if ( kernel_order > 2 )					
+						//#pragma omp ordered
 						for ( x = 0; x < kernel_order; x++) {
 							for ( y = 0; y < kernel_order; y++ ) {
+								
+															
 								a = _mm_setr_epi32(image[w+x][h+y][c],image[w+x][h+y][c+1],image[w+x][h+y][c+2],image[w+x][h+y][c+3]);
 								b = _mm_setr_epi32(kernels[m][c][x][y],kernels[m][c+1][x][y],kernels[m][c+2][x][y],kernels[m][c+3][x][y]);
 								mul = muly(a,b);
 								sum = _mm_add_epi32(sum,mul);
+								
 							}
 						}
-						//printf("ssum %f\n",c);
+						//printf("ssum %f\n",c);		
 						output[m][w][h] = _mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3);
 						//output[m][w][h] = _mm_extract_epi32(sum, 0);
 						//output[m+1][w][h] = _mm_extract_epi32(sum, 1);
@@ -320,9 +323,9 @@ int main(int argc, char ** argv)
   //float kernels[M][C][K][K];
   //float output[M][W][H];
   
-  int16_t *** image, **** kernels;
-  float *** control_output, *** output;
-  long long mul_time;
+  int16_t *** image, **** kernels,*** image2, **** kernels2;
+  float *** control_output, *** output, ***output2;
+  long long mul_time,mul_time2;
   int width, height, kernel_order, nchannels, nkernels;
   struct timeval start_time;
   struct timeval stop_time;
@@ -354,8 +357,10 @@ int main(int argc, char ** argv)
                                nchannels);
   kernels = gen_random_4d_matrix_int16(nkernels, nchannels, kernel_order, kernel_order);
   output = new_empty_3d_matrix_float(nkernels, width, height);
+  output2 = new_empty_3d_matrix_float(nkernels, width, height);
   control_output = new_empty_3d_matrix_float(nkernels, width, height);
-
+  image2 = image;
+  kernels2 = kernels;
   //DEBUGGING(write_out(A, a_dim1, a_dim2));
 
   /* use a simple multichannel convolution routine to produce control result */
@@ -375,6 +380,18 @@ int main(int argc, char ** argv)
   printf("Team conv time: %lld microseconds\n", mul_time);
 
   DEBUGGING(write_out(output, nkernels, width, height));
+
+  /* record starting time of team's code*/
+  gettimeofday(&start_time, NULL);
+
+  /* perform student team's multichannel convolution */
+  multichannel_conv(image2, kernels2, output2, width,
+                    height, nchannels, nkernels, kernel_order);
+  /* record finishing time */
+  gettimeofday(&stop_time, NULL);
+  mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
+    (stop_time.tv_usec - start_time.tv_usec);
+  printf("not Team conv time: %lld microseconds\n", mul_time);
 
   /* now check that the team's multichannel convolution routine
      gives the same answer as the known working version */
