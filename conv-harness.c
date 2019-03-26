@@ -281,24 +281,17 @@ int h, w, x, y, c, m;
 	{ 
 		#pragma omp for collapse(3)
 		for ( m = 0; m < nkernels; m++ ) {
-			//#pragma omp for
 			for ( w = 0; w < width; w++ ) {
-				//#pragma omp for
 				for ( h = 0; h < height; h++ ) { 
-					//double ssum = 0.0;
 					__m128i sum = _mm_setr_epi32(0,0,0,0);
 					__m128i mul = _mm_setr_epi32(0,0,0,0);
 					for ( c = 0; c < nchannels; c+=4 ) {
-						//#pragma omp ordered
 						for ( x = 0; x < kernel_order; x++) {
-							for ( y = 0; y < kernel_order; y++ ) {
-								
-															
+							for ( y = 0; y < kernel_order; y++ ) {						
 								a = _mm_setr_epi32(image[w+x][h+y][c],image[w+x][h+y][c+1],image[w+x][h+y][c+2],image[w+x][h+y][c+3]);
 								b = _mm_setr_epi32(kernels[m][c][x][y],kernels[m][c+1][x][y],kernels[m][c+2][x][y],kernels[m][c+3][x][y]);
 								mul = muly(a,b);
 								sum = _mm_add_epi32(sum,mul);
-								
 							}
 						}
 						//printf("ssum %f\n",c);		
@@ -308,7 +301,6 @@ int h, w, x, y, c, m;
 						//output[m+2][w][h] = _mm_extract_epi32(sum, 2);
 						//output[m+3][w][h] = _mm_extract_epi32(sum, 3);
 					}
-					
 				}
 			}
 		}
