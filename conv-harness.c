@@ -277,37 +277,38 @@ void team_conv(int16_t *** image, int16_t **** kernels, float *** output,
 int h, w, x, y, c, m;
 	__m128i a,b; //vectors 
 	//__attribute__((aligned(16))) float vector[4];
-	#pragma omp parallel 
-	{
-	#pragma omp for
-	for ( m = 0; m < nkernels; m+=4 ) {
-		//#pragma omp for
-		for ( w = 0; w < width; w++ ) {
+	#pragma omp parallel
+	{ 
+		#pragma omp for collapse(3)
+		for ( m = 0; m < nkernels; m++ ) {
 			//#pragma omp for
-			for ( h = 0; h < height; h++ ) { 
-				//double ssum = 0.0;
-				__m128i sum = _mm_setr_epi32(0,0,0,0);
-				__m128i mul = _mm_setr_epi32(0,0,0,0);
-				for ( c = 0; c < nchannels; c++ ) {
-					for ( x = 0; x < kernel_order; x++) {
-						for ( y = 0; y < kernel_order; y++ ) {
-							a = _mm_setr_epi32(image[w+x][h+y][c],image[w+x][h+y][c],image[w+x][h+y][c],image[w+x][h+y][c]);
-							b = _mm_setr_epi32(kernels[m][c][x][y],kernels[m+1][c][x][y],kernels[m+2][c][x][y],kernels[m+3][c][x][y]);
-							mul = muly(a,b);
-							sum = _mm_add_epi32(sum,mul);
+			for ( w = 0; w < width; w++ ) {
+				//#pragma omp for
+				for ( h = 0; h < height; h++ ) { 
+					//double ssum = 0.0;
+					__m128i sum = _mm_setr_epi32(0,0,0,0);
+					__m128i mul = _mm_setr_epi32(0,0,0,0);
+					for ( c = 0; c < nchannels; c+=4 ) {
+						//#pragma omp for if ( kernel_order > 2 )					
+						for ( x = 0; x < kernel_order; x++) {
+							for ( y = 0; y < kernel_order; y++ ) {
+								a = _mm_setr_epi32(image[w+x][h+y][c],image[w+x][h+y][c+1],image[w+x][h+y][c+2],image[w+x][h+y][c+3]);
+								b = _mm_setr_epi32(kernels[m][c][x][y],kernels[m][c+1][x][y],kernels[m][c+2][x][y],kernels[m][c+3][x][y]);
+								mul = muly(a,b);
+								sum = _mm_add_epi32(sum,mul);
+							}
 						}
+						//printf("ssum %f\n",c);
+						output[m][w][h] = _mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3);
+						//output[m][w][h] = _mm_extract_epi32(sum, 0);
+						//output[m+1][w][h] = _mm_extract_epi32(sum, 1);
+						//output[m+2][w][h] = _mm_extract_epi32(sum, 2);
+						//output[m+3][w][h] = _mm_extract_epi32(sum, 3);
 					}
-					//printf("ssum %f\n",c);
-					//output[m][w][h] = _mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3);
-					output[m][w][h] = _mm_extract_epi32(sum, 0);
-					output[m+1][w][h] = _mm_extract_epi32(sum, 1);
-					output[m+2][w][h] = _mm_extract_epi32(sum, 2);
-					output[m+3][w][h] = _mm_extract_epi32(sum, 3);
+					
 				}
-				
 			}
 		}
-	}
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
