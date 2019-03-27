@@ -1,3 +1,4 @@
+
 /* Test and timing harness program for developing a multichannel
    multikernel convolution (as used in deep learning networks)
 
@@ -274,33 +275,52 @@ void team_conv(int16_t *** image, int16_t **** kernels, float *** output,
                int kernel_order)
 {
 
-int h, w, x, y, c, m;
+	int h, w, x, y, c, m;
 	__m128i a,b; //vectors 
-	//__attribute__((aligned(16))) float vector[4];
-	#pragma omp parallel 
-	{ 
-		#pragma omp for collapse(3)
+	int ssum=0;
+	if(nchannels>128){
+	#pragma omp parallel for shared (w,h,x,y,c,m) collapse(3) num_threads(64) 
+ 		for ( m = 0; m < nkernels; m++ ) {
+    			for ( w = 0; w < width; w++ ) {
+
+     				 for ( h = 0; h < height; h++ ) {
+       					double sum = 0.0;
+        				for ( c = 0; c < nchannels; c++ ) {
+          					for ( x = 0; x < kernel_order; x++) {
+            						for ( y = 0; y < kernel_order; y++ ) {
+             						sum += (double) image[w+x][h+y][c] * (double) kernels[m][c][x][y];
+            						}
+          					}
+          					output[m][w][h] = (float) sum;
+        				}
+      				}
+    			}
+  		}
+	}
+	else{
+		#pragma omp parallel for shared (w,h,x,y,c,m) collapse(3) num_threads(64) 
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) { 
-					__m128i sum = _mm_setr_epi32(0,0,0,0);
-					__m128i mul = _mm_setr_epi32(0,0,0,0);
 					for ( c = 0; c < nchannels; c+=4 ) {
+						__m128i sum = _mm_setr_epi32(0,0,0,0);
+						__m128i mul = _mm_setr_epi32(0,0,0,0);
 						for ( x = 0; x < kernel_order; x++) {
-							for ( y = 0; y < kernel_order; y++ ) {						
+							for ( y = 0; y < kernel_order; y++ ) {				
 								a = _mm_setr_epi32(image[w+x][h+y][c],image[w+x][h+y][c+1],image[w+x][h+y][c+2],image[w+x][h+y][c+3]);
 								b = _mm_setr_epi32(kernels[m][c][x][y],kernels[m][c+1][x][y],kernels[m][c+2][x][y],kernels[m][c+3][x][y]);
-								mul = muly(a,b);
+								__m128i tmp1 = _mm_mul_epu32(a,b); /* mul 2,0*/
+    								__m128i tmp2 = _mm_mul_epu32( _mm_srli_si128(a,4), _mm_srli_si128(b,4)); /* mul 3,1 */
+								mul = _mm_unpacklo_epi32(_mm_shuffle_epi32(tmp1, _MM_SHUFFLE (0,0,2,0)), 
+									_mm_shuffle_epi32(tmp2, _MM_SHUFFLE (0,0,2,0))); /* shuffle results to [63..0] and pack */
+								//https://stackoverflow.com/questions/10500766/sse-multiplication-of-4-32-bit-integers
 								sum = _mm_add_epi32(sum,mul);
 							}
 						}
-						//printf("ssum %f\n",c);		
-						output[m][w][h] = _mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3);
-						//output[m][w][h] = _mm_extract_epi32(sum, 0);
-						//output[m+1][w][h] = _mm_extract_epi32(sum, 1);
-						//output[m+2][w][h] = _mm_extract_epi32(sum, 2);
-						//output[m+3][w][h] = _mm_extract_epi32(sum, 3);
+						ssum += _mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3);	
+						output[m][w][h] = ssum;
 					}
+					ssum = 0;
 				}
 			}
 		}
@@ -319,6 +339,7 @@ int main(int argc, char ** argv)
   float *** control_output, *** output, ***output2;
   long long mul_time,mul_time2;
   int width, height, kernel_order, nchannels, nkernels;
+	float difference;
   struct timeval start_time;
   struct timeval stop_time;
 
@@ -381,9 +402,11 @@ int main(int argc, char ** argv)
                     height, nchannels, nkernels, kernel_order);
   /* record finishing time */
   gettimeofday(&stop_time, NULL);
-  mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
+  mul_time2 = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
     (stop_time.tv_usec - start_time.tv_usec);
-  printf("not Team conv time: %lld microseconds\n", mul_time);
+  printf("not Team conv time: %lld microseconds\n", mul_time2);
+	difference =(float)mul_time2/(float)mul_time;
+	printf("Wow: %f faster\n", difference);
 
   /* now check that the team's multichannel convolution routine
      gives the same answer as the known working version */
