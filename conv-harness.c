@@ -297,6 +297,24 @@ void team_conv(int16_t *** image, int16_t **** kernels, float *** output,
     			}
   		}
 	}
+	else if (height*width*nkernels*nchannels==262144){
+		for ( m = 0; m < nkernels; m++ ) {
+    			for ( w = 0; w < width; w++ ) {
+
+     				 for ( h = 0; h < height; h++ ) {
+       					double sum = 0.0;
+        				for ( c = 0; c < nchannels; c++ ) {
+          					for ( x = 0; x < kernel_order; x++) {
+            						for ( y = 0; y < kernel_order; y++ ) {
+             						sum += (double) image[w+x][h+y][c] * (double) kernels[m][c][x][y];
+            						}
+          					}
+          					output[m][w][h] = (float) sum;
+        				}
+      				}
+    			}
+  		}
+	}
 	else{
 		#pragma omp parallel for shared (w,h,x,y,c,m) collapse(3) num_threads(64) 
 		for ( m = 0; m < nkernels; m++ ) {
@@ -394,57 +412,9 @@ int main(int argc, char ** argv)
 
   DEBUGGING(write_out(output, nkernels, width, height));
 
-  /* record starting time of team's code*/
-  gettimeofday(&start_time, NULL);
-
-  /* perform student team's multichannel convolution */
-  multichannel_conv(image2, kernels2, output2, width,
-                    height, nchannels, nkernels, kernel_order);
-  /* record finishing time */
-  gettimeofday(&stop_time, NULL);
-  mul_time2 = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
-    (stop_time.tv_usec - start_time.tv_usec);
-  printf("not Team conv time: %lld microseconds\n", mul_time2);
-	difference =(float)mul_time2/(float)mul_time;
-	printf("Wow: %f faster\n", difference);
-
   /* now check that the team's multichannel convolution routine
      gives the same answer as the known working version */
   check_result(output, control_output, nkernels, width, height);
 
   return 0;
 }
-
-	/*int h, w, x, y, c, m;
-	__m128i a,b,mul; //vectors 
-	__attribute__((aligned(16))) float vector[4];
-	
-	for ( m = 0; m < nkernels; m++ ) {
-		for ( w = 0; w < width; w++ ) {
-			for ( h = 0; h < height; h++ ) { 
-				double ssum = 0.0;
-				__m128i sum = _mm_setr_epi32(0,0,0,0);
-				for ( c = 0; c < nchannels; c+=4 ) {
-					for ( x = 0; x < kernel_order; x++) {
-						for ( y = 0; y < kernel_order; y++ ) {
-							a = _mm_setr_epi32(image[w+x][h+y][c],image[w+x][h+y][c+1],image[w+x][h+y][c+2],image[w+x][h+y][c+3]);
-							b = _mm_setr_epi32(kernels[m][c][x][y],kernels[m][c+1][x][y],kernels[m][c+2][x][y],kernels[m][c+3][x][y]);
-							mul = _mm_mul_epi32(a,b);
-							sum = _mm_add_epi32(sum,mul);
-							ssum += (double) image[w+x][h+y][c+3] * (double) kernels[m][c+3][x][y];
-							printf("sum  %d\n",_mm_extract_epi32(sum, 3));
-							printf("ssum %f\n",ssum);
-							//ssum += (double) image[w+x][h+y][c+1] * (double) kernels[m][c+1][x][y];
-							//ssum += (double) image[w+x][h+y][c+2] * (double) kernels[m][c+2][x][y];
-							//ssum += (double) image[w+x][h+y][c+3] * (double) kernels[m][c+3][x][y];
-						}
-					}
-					//_mm_store_ps(vector, sum);
-					output[m][w][h] = _mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3);
-				}
-				//printf("sum  %d\n",_mm_extract_epi32(sum, 0) + _mm_extract_epi32(sum, 1) + _mm_extract_epi32(sum, 2) +_mm_extract_epi32(sum, 3));
-				
-			}
-		}
-	}
-*/
